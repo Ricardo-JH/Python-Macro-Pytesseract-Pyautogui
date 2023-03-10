@@ -1,14 +1,51 @@
-import pyautogui
-import time
-from credentials import *
+from datetime import datetime, timedelta
 from OCR_Detect import OCR
+from credentials import *
+import pandas as pd
 import pyperclip
+import pyautogui
+import warnings
+import pyodbc
+import time
+
+
+warnings.filterwarnings('ignore')
 
 
 class Command:
     def __init__(self):
         pass
     
+    def get_schedule_updates(self, week=None):
+        start_time = time.time()
+
+        Database = 'TRESS'
+        Driver = 'ODBC Driver 17 for SQL Server'
+        Server = 'SQLSERVER\GGAMASTEDDB'
+        User = 'GGASOLUTIONS\ricardo.jaramillo'
+        Connection_String = f'DRIVER={Driver};SERVER={Server};DATABASE={Database};UID={User};Trusted_Connection=yes;'
+
+        connection = pyodbc.connect(Connection_String)
+        
+        if week == None:
+            weekdate = datetime.date(datetime.now()) - timedelta(days=datetime.now().weekday())
+            week = weekdate.isocalendar()[1]
+        else:
+            weekdate = datetime.strptime('2023-W' + str(week) + '-1', '%G-W%V-%u').strftime('%Y-%m-%d')
+        
+        query = f"Select * from V_schedules_daily_comparative where schedule_weekdate_TRESS = '{weekdate}'"
+
+        data = pd.DataFrame(pd.read_sql(query, connection)).fillna('')
+        data = data[['Emp', 'schedule_referenceDate_TRESS', 'schedule_daily_Genesys']]
+        # data['schedule_daily_Genesys'] = data['schedule_daily_Genesys'].astype(int)
+        
+        elapsedTime = time.time() - start_time
+        print(f'Time get data: {elapsedTime} sec') 
+
+        connection.close()
+        return data, week, weekdate
+
+
     def type(self, string, wait_time=0):
         pyperclip.copy(string)
         pyautogui.hotkey("ctrl", "v")
@@ -71,7 +108,7 @@ class Command:
         self.left_click('OK', thresh=-100, wait_time=1, psm=6)
 
 
-    def update_schedules(self, emp_list):
+    def update_schedules(self, df_schedule_updates):
         for emp, week, updates in emp_list:
             # enter Emp
             self.left_click('N?umero?', thresh=0, offset_x=30)
