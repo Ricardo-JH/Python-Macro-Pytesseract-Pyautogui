@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from OCR_Detect import OCR
 from credentials import *
 import pandas as pd
+import numpy as np
 import pyperclip
 import pyautogui
 import warnings
@@ -33,7 +34,14 @@ class Command:
         else:
             weekdate = datetime.strptime('2023-W' + str(week) + '-1', '%G-W%V-%u').strftime('%Y-%m-%d')
         
-        query = f"Select * from V_schedules_daily_comparative where schedule_weekdate_TRESS = '{weekdate}'"
+        query = f'''
+            Select
+                *
+            from V_schedules_daily_comparative
+            where schedule_weekdate_TRESS = '{weekdate}' 
+            and needs_update = 1
+            order by emp, schedule_referenceDate_TRESS
+        '''
 
         data = pd.DataFrame(pd.read_sql(query, connection)).fillna('')
         data = data[['Emp', 'schedule_referenceDate_TRESS', 'schedule_daily_Genesys']]
@@ -43,7 +51,7 @@ class Command:
         print(f'Time get data: {elapsedTime} sec') 
 
         connection.close()
-        return data, week, weekdate
+        return (data, week, weekdate)
 
 
     def type(self, string, wait_time=0):
@@ -108,23 +116,53 @@ class Command:
         self.left_click('OK', thresh=-100, wait_time=1, psm=6)
 
 
-    def update_schedules(self, df_schedule_updates):
-        for emp, week, updates in emp_list:
-            # enter Emp
+    def update_schedules(self, updates):
+        # get schedule_daily_updates
+        df_schedule_updates, week, _ = updates
+
+        # set emp_list to be updated in TRESS
+        emp_list = sorted(list(df_schedule_updates['Emp'].unique()))
+        
+        for emp in emp_list:
+            # set df containing schedules of individual emp
+            df_emp = df_schedule_updates.groupby('Emp').get_group(emp).reset_index(drop=True)
+            schedules_list = [-1, -1, -1, -1, -1, -1, -1]
+
+            # save in a list all schedule updates of the week
+            for i in range(df_emp.shape[0]):
+                date = df_emp['schedule_referenceDate_TRESS'].iloc[i]
+                new_schedule = df_emp['schedule_daily_Genesys'].iloc[i]
+
+                weekday = date.weekday()
+                schedules_list[weekday] = str(new_schedule).replace('.0', '')
+            
+            # continue
+            # look for emp in TRESS
             self.left_click('N?umero?', thresh=0, offset_x=30)
-            self.type(emp, 0.2)
+            self.type(str(emp), 0.2)
             self.press('enter', 1)
 
             # enter week number
             self.left_click('.S?emanal?', thresh=0, offset_y=25)
-            pyautogui.typewrite(week, 0.05)
+            pyautogui.typewrite(str(week), 0.05)
             time.sleep(0.2)
             self.press('enter', 1)
 
             self.left_click('F?echa?:?', thresh=-10, wait_time=1, offset_x=200)
 
-            # need a list of updates for the specific Emp
-            self.update_schedule(updates)
+            # update schedules
+            # set start position
+            self.left_click('H?abil?', thresh=-10, wait_time=0.25)
+            self.press('up', times=6)
+            self.press('left', times=2)
+
+            # enter schedule
+            for new_schedule in schedules_list:
+                if new_schedule != -1:
+                    pyautogui.typewrite(str(new_schedule), 0.05)
+                    time.sleep(0.2)
+                self.press('down')
+            self.left_click('OK', thresh=-100, wait_time=1, psm=6)
         
         pyautogui.alert('Schedules update Finish.')
 
