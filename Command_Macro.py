@@ -67,17 +67,20 @@ class Command:
     
 
     def left_click(self, search, thresh=0, wait_time=0, offset_x=0, offset_y=0, psm=11):
-        Detect = OCR(psm, thresh)
+        try:
+            Detect = OCR(psm, thresh)
 
-        img, words = Detect.get_boxes_words(pattern=search, thresh=thresh)
-        
-        if search in ['.', 'S?emana?']:
-            Detect.show_img(img)
-        
-        x, y = words[0][1] + offset_x, words[0][2] + offset_y
+            img, words = Detect.get_boxes_words(pattern=search, thresh=thresh)
+            
+            if search in ['.', 'S?emana?']:
+                Detect.show_img(img)
+            
+            x, y = words[0][1] + offset_x, words[0][2] + offset_y
 
-        pyautogui.leftClick(x, y)
-        time.sleep(wait_time)
+            pyautogui.leftClick(x, y)
+            time.sleep(wait_time)
+        except IndexError:
+            print('No words found.')
 
 
     def open_TRESS(self):
