@@ -40,6 +40,7 @@ class Command:
             from V_schedules_daily_comparative
             where schedule_weekdate_TRESS = '{weekdate}' 
             and needs_update = 1
+            and emp in ('2520', '3522')
             order by emp, schedule_referenceDate_TRESS
         '''
 
@@ -103,26 +104,11 @@ class Command:
         self.left_click('C?o?nsulta?r', thresh=-10, wait_time=0.25)
 
 
-    def update_schedule(self, updates):
-        
-        # set start position
-        self.left_click('H?abil?', thresh=-10, wait_time=0.25)
-        self.press('up', times=6)
-        self.press('left', times=2)
-
-        # enter Schedule
-        for update in updates:
-            if update[0]:
-                pyautogui.typewrite(update[1], 0.05)
-                time.sleep(0.2)
-            self.press('down')
-        self.left_click('OK', thresh=-100, wait_time=1, psm=6)
-
-
     def update_schedules(self, updates):
         # get schedule_daily_updates
         df_schedule_updates, week, _ = updates
-
+        # print(df_schedule_updates)
+        
         # set emp_list to be updated in TRESS
         emp_list = sorted(list(df_schedule_updates['Emp'].unique()))
         
@@ -160,12 +146,35 @@ class Command:
             self.press('left', times=2)
 
             # enter schedule
+            day_number = 1
             for new_schedule in schedules_list:
                 if new_schedule != -1:
-                    pyautogui.typewrite(str(new_schedule), 0.05)
+                    # introduce schedule number
+                    if new_schedule != '':
+                        pyautogui.typewrite(str(new_schedule), 0.05)
+                        time.sleep(0.2)
+                    else:
+                        self.press('del')
+                    
+                    # introduce type of day
+                    self.press('tab')
+                    
+                    if new_schedule != '':
+                        if day_number != 6:
+                            pyautogui.typewrite(str('Ha'), 0.05)
+                        else:
+                            pyautogui.typewrite(str('Sa'), 0.05)
+                    else:
+                        pyautogui.typewrite(str('De'), 0.05)
                     time.sleep(0.2)
+
+                    # Back to schedule cell
+                    pyautogui.hotkey('shift', 'tab')
+                    pyautogui.hotkey('shift', 'tab')
                 self.press('down')
-            self.left_click('OK', thresh=-100, wait_time=1, psm=6)
+                day_number += 1
+            return
+            # self.left_click('OK', thresh=-100, wait_time=1, psm=6)
         
         pyautogui.alert('Schedules update Finish.')
 
