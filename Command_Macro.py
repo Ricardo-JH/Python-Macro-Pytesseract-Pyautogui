@@ -92,6 +92,7 @@ class Command:
             return True
         except IndexError:
             print('No words found.')
+            # pyautogui.alert(f'{search} not found')
             return False
 
 
