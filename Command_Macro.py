@@ -17,7 +17,7 @@ class Command:
     def __init__(self):
         pass
     
-    def get_schedule_updates(self, week=None):
+    def get_schedule_updates(self, week=None, week_offset=0):
         start_time = time.time()
 
         Database = 'TRESS'
@@ -29,10 +29,10 @@ class Command:
         connection = pyodbc.connect(Connection_String)
         
         if week == None:
-            weekdate = datetime.date(datetime.now()) - timedelta(days=datetime.now().weekday())
+            weekdate = datetime.date(datetime.now()) - timedelta(days=datetime.now().weekday()) - timedelta(days=week_offset*7)
             week = weekdate.isocalendar()[1]
         else:
-            weekdate = datetime.strptime('2023-W' + str(week) + '-1', '%G-W%V-%u').strftime('%Y-%m-%d')
+            weekdate = datetime.strptime('2023-W' + str(week - week_offset) + '-1', '%G-W%V-%u').strftime('%Y-%m-%d')
         
         query = f'''
             Select
@@ -40,9 +40,14 @@ class Command:
             from V_schedules_daily_comparative
             where schedule_weekdate_TRESS = '{weekdate}' 
             and needs_update = 1
-            and emp in ('2520', '3522')
+            and emp in (
+                        '655','763','764','1704','2110','2267','2283','2346','2503','2767'  
+                        ,'2812','2836','3106','3140','3153','3238','3292','3498','3525','3530'
+                        ,'3537','3598','3601', '3658', '3703', '3758', '3764'
+                        )
             order by emp, schedule_referenceDate_TRESS
         '''
+        # '2520','3522' # let out
 
         data = pd.DataFrame(pd.read_sql(query, connection)).fillna('')
         data = data[['Emp', 'schedule_referenceDate_TRESS', 'schedule_daily_Genesys']]
@@ -72,16 +77,22 @@ class Command:
             Detect = OCR(psm, thresh)
 
             img, words = Detect.get_boxes_words(pattern=search, thresh=thresh)
+            # img_any_filter, words_any_filter = Detect.get_boxes_words(pattern='.', thresh=thresh)
             
-            if search in ['.', 'S?emana?']:
+            if search in ['.']: # 'S?emana?', 'OK', 'VES', 'Mx', 'N[uú]?i?mer?o?.*', 'U?suario?:?'
+                # print(words_any_filter)
+                # Detect.show_img(img_any_filter)
+                print(words)
                 Detect.show_img(img)
             
             x, y = words[0][1] + offset_x, words[0][2] + offset_y
 
             pyautogui.leftClick(x, y)
             time.sleep(wait_time)
+            return True
         except IndexError:
             print('No words found.')
+            return False
 
 
     def open_TRESS(self):
@@ -90,8 +101,7 @@ class Command:
         self.type('Supervisores', 0.2)
         self.press('enter', 1.5)
 
-        self.left_click('U?suario?:?', thresh=-100, offset_x=50) # U?suario?:?
-        
+        # self.left_click('U?suario?:?', thresh=-10, offset_x=50)
         self.type(credentials['user'], 0.2)
         self.press('tab', 0.2)
         self.type(credentials['pass'], 0.2)
@@ -127,7 +137,7 @@ class Command:
             
             # continue
             # look for emp in TRESS
-            self.left_click('N?umero?', thresh=0, offset_x=30)
+            self.left_click('N[uú]?i?mer?o?.*', thresh=-10, offset_x=30)
             self.type(str(emp), 0.2)
             self.press('enter', 1)
 
@@ -173,8 +183,26 @@ class Command:
                     pyautogui.hotkey('shift', 'tab')
                 self.press('down')
                 day_number += 1
-            return
-            # self.left_click('OK', thresh=-100, wait_time=1, psm=6)
+
+            # op = 'Cancel'
+            op = pyautogui.confirm(text='Press?', buttons=['OK', 'Cancel', 'End programm']) 
+            time.sleep(0.1)
+            if op == 'OK':
+                found = self.left_click('VES', thresh=-10, wait_time=1)
+                
+                if not found:
+                    self.left_click('Mx', thresh=-10, wait_time=1)
+
+            elif op == 'Cancel':
+                found = self.left_click('VES', thresh=-10, wait_time=1, offset_x=80)
+                
+                if not found:
+                    self.left_click('Mx', thresh=-10, wait_time=1, offset_x=80)
+                
+                self.press('tab', wait_time=1)
+                self.press('enter', wait_time=1)
+            else:
+                break
         
         pyautogui.alert('Schedules update Finish.')
 

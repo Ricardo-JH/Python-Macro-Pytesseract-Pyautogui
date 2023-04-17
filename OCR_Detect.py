@@ -50,6 +50,7 @@ class OCR:
 
         data = pytesseract.image_to_data(img, config=self.config, output_type=pytesseract.Output.DICT)
         # print(data['conf'])
+        # print(data['text'])
 
         num_boxes = len(data['text'])
 
