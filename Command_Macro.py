@@ -43,7 +43,7 @@ class Command:
             and emp in (
                         '655','763','764','1704','2110','2267','2283','2346','2503','2767'  
                         ,'2812','2836','3106','3140','3153','3238','3292','3498','3525','3530'
-                        ,'3537','3598','3601', '3658', '3703', '3758', '3764'
+                        ,'3537','3598','3601', '3703', '3758', '3764'
                         )
             order by emp, schedule_referenceDate_TRESS
         '''
@@ -164,19 +164,17 @@ class Command:
                     if new_schedule != '':
                         pyautogui.typewrite(str(new_schedule), 0.05)
                         time.sleep(0.2)
-                    else:
-                        self.press('del')
-                    
+
                     # introduce type of day
                     self.press('tab')
                     
                     if new_schedule != '':
+                        pyautogui.typewrite(str('Ha'), 0.05)
+                    else:
                         if day_number != 6:
-                            pyautogui.typewrite(str('Ha'), 0.05)
+                            pyautogui.typewrite(str('De'), 0.05)
                         else:
                             pyautogui.typewrite(str('Sa'), 0.05)
-                    else:
-                        pyautogui.typewrite(str('De'), 0.05)
                     time.sleep(0.2)
 
                     # Back to schedule cell
@@ -185,23 +183,21 @@ class Command:
                 self.press('down')
                 day_number += 1
 
-            # op = 'Cancel'
+            # op = 'OK'
             op = pyautogui.confirm(text='Press?', buttons=['OK', 'Cancel', 'End programm']) 
             time.sleep(0.1)
             if op == 'OK':
                 found = self.left_click('VES', thresh=-10, wait_time=1)
-                
                 if not found:
                     self.left_click('Mx', thresh=-10, wait_time=1)
 
             elif op == 'Cancel':
                 found = self.left_click('VES', thresh=-10, wait_time=1, offset_x=80)
-                
                 if not found:
                     self.left_click('Mx', thresh=-10, wait_time=1, offset_x=80)
                 
-                self.press('tab', wait_time=1)
-                self.press('enter', wait_time=1)
+                self.press('tab', wait_time=0.2)
+                self.press('enter', wait_time=0.2)
             else:
                 break
         
