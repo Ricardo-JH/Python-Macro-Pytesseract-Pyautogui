@@ -34,24 +34,36 @@ class Command:
         else:
             weekdate = datetime.strptime('2023-W' + str(week - week_offset) + '-1', '%G-W%V-%u').strftime('%Y-%m-%d')
         
+        end_of_week = weekdate + timedelta(days=6)
+
         query = f'''
             Select
                 *
-            from V_schedules_daily_comparative
-            where schedule_weekdate_TRESS = '{weekdate}' 
+            from V_schedules_daily_comparative_talkdesk
+            where schedule_referenceDate_TRESS >= '{weekdate}'
+            and schedule_referenceDate_TRESS <= '{end_of_week}' 
             and needs_update = 1
-            and emp in (
-                        '655', '1525', '1704'
-                        , '2110', '2267', '2530', '2615', '2692'
-                        , '3470', '3530', '3598'
-                        , '3855', '3872'
-                        )
+            /*and emp in (
+                        '2530',
+                        '2771',
+                        '2847',
+                        '3082',
+                        '3321',
+                        '3329',
+                        '3497',
+                        '3575',
+                        '3596',
+                        '3834',
+                        '3839',
+                        '3852',
+                        '3857'
+                        )*/
             order by emp, schedule_referenceDate_TRESS
         '''
         # '2520','3522' # let out
 
         data = pd.DataFrame(pd.read_sql(query, connection)).fillna('')
-        data = data[['Emp', 'schedule_referenceDate_TRESS', 'schedule_daily_Genesys']]
+        data = data[['Emp', 'schedule_referenceDate_TRESS', 'schedule_daily_new']]
         # data['schedule_daily_Genesys'] = data['schedule_daily_Genesys'].astype(int)
         
         elapsedTime = time.time() - start_time
